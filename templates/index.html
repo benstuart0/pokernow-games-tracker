@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokerNow Games Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #e74c3c;
+            --accent-color: #3498db;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-color);
+            background-color: var(--light-color);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: rgba(236, 240, 241, 0.5);
+            border-radius: 8px;
+        }
+        
+        .section-title {
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+        
+        input[type="text"], 
+        input[type="url"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="url"]:focus,
+        textarea:focus {
+            border-color: var(--accent-color);
+            outline: none;
+        }
+        
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button.remove {
+            background-color: var(--secondary-color);
+        }
+        
+        button.remove:hover {
+            background-color: #c0392b;
+        }
+        
+        button.start {
+            background-color: var(--success-color);
+            font-weight: bold;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+        }
+        
+        button.start:hover {
+            background-color: #27ae60;
+        }
+        
+        button.stop {
+            background-color: var(--secondary-color);
+            font-weight: bold;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+        }
+        
+        button.stop:hover {
+            background-color: #c0392b;
+        }
+        
+        .games-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+        
+        .game-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 5px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .game-link {
+            flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .game-profit {
+            margin-left: 15px;
+            font-weight: bold;
+        }
+        
+        .game-profit.positive {
+            color: var(--success-color);
+        }
+        
+        .game-profit.negative {
+            color: var(--secondary-color);
+        }
+        
+        .game-profit.error {
+            color: var(--secondary-color);
+            font-style: italic;
+            background-color: rgba(231, 76, 60, 0.1);
+            padding: 5px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        
+        .alias-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .alias-tag {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .alias-tag .remove-alias {
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .results-table th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .total-row {
+            font-weight: bold;
+            background-color: rgba(236, 240, 241, 0.7);
+        }
+        
+        .total-row.positive {
+            color: var(--success-color);
+        }
+        
+        .total-row.negative {
+            color: var(--secondary-color);
+        }
+        
+        .last-scrape {
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+            color: var(--dark-color);
+        }
+        
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+            padding: 30px;
+            background-color: rgba(52, 152, 219, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(52, 152, 219, 0.2);
+        }
+        
+        .loading i {
+            font-size: 2.5rem;
+            color: var(--accent-color);
+            animation: spin 1s infinite linear;
+            margin-bottom: 15px;
+        }
+        
+        .loading p {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+        
+        .loading .status {
+            margin-top: 10px;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            color: var(--secondary-color);
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        
+        .game-management-panel {
+            background-color: rgba(52, 152, 219, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(52, 152, 219, 0.2);
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .current-games, .current-aliases {
+            flex: 1;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .games-list-compact .game-item {
+            padding: 5px;
+            margin-bottom: 3px;
+            font-size: 0.9rem;
+        }
+        
+        .games-list-compact .game-item button {
+            padding: 3px 8px;
+            font-size: 0.8rem;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        button.rescrape {
+            background-color: var(--warning-color);
+            padding: 10px 20px;
+            font-weight: bold;
+        }
+        
+        button.rescrape:hover {
+            background-color: #e67e22;
+        }
+        
+        button.rescrape i {
+            margin-right: 5px;
+        }
+        
+        .graphs-section {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .main-graph {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 30px;
+        }
+        
+        .mini-graphs {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .mini-graph {
+            background: rgba(236, 240, 241, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            height: 200px;
+        }
+        
+        .graph-title {
+            font-size: 1.2em;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .cents-toggle {
+            margin: 0 10px;
+        }
+        
+        .cents-label {
+            display: flex;
+            align-items: center;
+            font-size: 0.9em;
+            color: var(--dark-color);
+        }
+        
+        .cents-checkbox {
+            margin-right: 5px;
+        }
+        
+        .game-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .game-link {
+            flex: 1;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PokerNow Games Tracker</h1>
+        
+        <div id="setup-section" class="section">
+            <h2 class="section-title">Game Setup</h2>
+            
+            <div class="form-group">
+                <label for="game-url">Add Game URL</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="url" id="game-url" placeholder="https://www.pokernow.club/games/..." />
+                    <button id="add-game">Add</button>
+                </div>
+                <div class="error-message" id="game-url-error"></div>
+            </div>
+            
+            <ul id="games-list" class="games-list"></ul>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="player-name">Player Name to Track</label>
+                <input type="text" id="player-name" placeholder="Enter your player name" />
+                <div class="error-message" id="player-name-error"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="player-alias">Add Player Alias (optional)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="player-alias" placeholder="Alternative player name" />
+                    <button id="add-alias">Add</button>
+                </div>
+            </div>
+            
+            <div id="alias-list" class="alias-list"></div>
+            
+            <div style="margin-top: 30px; text-align: center;">
+                <button id="start-tracking" class="start">Start Tracking</button>
+                <button id="stop-tracking" class="stop" style="display: none;">Stop Tracking</button>
+            </div>
+        </div>
+        
+        <div id="results-section" class="section" style="display: none;">
+            <h2 class="section-title">Tracking Results</h2>
+            
+            <!-- Graph section first -->
+            <div class="graphs-section">
+                <div class="graph-title"><span id="player-name-title"></span> Profit/Loss</div>
+                <div class="main-graph">
+                    <canvas id="totalProfitGraph"></canvas>
+                </div>
+            </div>
+            
+            <!-- Results table second -->
+            <div class="loading">
+                <i class="fas fa-spinner"></i>
+                <p>Processing games...</p>
+                <div class="status">This may take a few moments depending on the number of games</div>
+            </div>
+            
+            <table id="results-table" class="results-table">
+                <thead>
+                    <tr>
+                        <th>Game</th>
+                        <th>Profit/Loss</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body">
+                    <!-- Results will be populated here -->
+                </tbody>
+                <tfoot>
+                    <tr id="total-row" class="total-row">
+                        <td>TOTAL</td>
+                        <td id="total-profit">$0</td>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <div id="last-scrape" class="last-scrape">
+                Last scrape: Never
+            </div>
+            
+            <div id="tracking-error" class="error-message" style="margin-top: 20px; text-align: center; display: none;">
+            </div>
+            
+            <!-- Game management panel moved to bottom -->
+            <div class="game-management-panel" style="margin-top: 30px;">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 3;">
+                        <label for="game-url-results">Add Game URL</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="url" id="game-url-results" placeholder="https://www.pokernow.club/games/..." />
+                            <button id="add-game-results">Add</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="flex: 2;">
+                        <label for="player-alias-results">Add Player Alias</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="player-alias-results" placeholder="Alternative player name" />
+                            <button id="add-alias-results">Add</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div id="current-games" class="current-games">
+                        <h4>Current Games</h4>
+                        <ul id="games-list-results" class="games-list games-list-compact"></ul>
+                    </div>
+                    
+                    <div id="current-aliases" class="current-aliases">
+                        <h4>Current Aliases</h4>
+                        <div id="alias-list-results" class="alias-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const gameUrlInput = document.getElementById('game-url');
+            const addGameButton = document.getElementById('add-game');
+            const gamesList = document.getElementById('games-list');
+            const playerNameInput = document.getElementById('player-name');
+            const playerAliasInput = document.getElementById('player-alias');
+            const addAliasButton = document.getElementById('add-alias');
+            const aliasList = document.getElementById('alias-list');
+            const startTrackingButton = document.getElementById('start-tracking');
+            const stopTrackingButton = document.getElementById('stop-tracking');
+            const setupSection = document.getElementById('setup-section');
+            const resultsSection = document.getElementById('results-section');
+            const resultsBody = document.getElementById('results-body');
+            const totalProfit = document.getElementById('total-profit');
+            const totalRow = document.getElementById('total-row');
+            const lastScrape = document.getElementById('last-scrape');
+            const loading = document.querySelector('.loading');
+            const gameUrlError = document.getElementById('game-url-error');
+            const playerNameError = document.getElementById('player-name-error');
+            
+            // DOM elements (new)
+            const gameUrlResultsInput = document.getElementById('game-url-results');
+            const addGameResultsButton = document.getElementById('add-game-results');
+            const gamesListResults = document.getElementById('games-list-results');
+            const playerAliasResultsInput = document.getElementById('player-alias-results');
+            const addAliasResultsButton = document.getElementById('add-alias-results');
+            const aliasListResults = document.getElementById('alias-list-results');
+            
+            // State variables
+            let games = [];  // Will now store objects: {url: string, isInCents: boolean}
+            let aliases = [];
+            let isTracking = false;
+            let resultsPollingInterval = null;
+            let tracking_results = { results: {} };
+            
+            let totalProfitChart = null;
+            let gameCharts = {};
+            
+            // Add game URL to the list
+            addGameButton.addEventListener('click', function() {
+                const gameUrl = gameUrlInput.value.trim();
+                gameUrlError.textContent = '';
+                
+                if (!gameUrl) {
+                    gameUrlError.textContent = 'Please enter a game URL';
+                    return;
+                }
+                
+                if (!gameUrl.includes('pokernow.club/games/')) {
+                    gameUrlError.textContent = 'URL must be from pokernow.club/games/';
+                    return;
+                }
+                
+                // Add to games array if not already there
+                if (!games.some(game => game.url === gameUrl)) {
+                    games.push({ url: gameUrl, isInCents: false });
+                    renderGamesList();
+                    gameUrlInput.value = '';
+                } else {
+                    gameUrlError.textContent = 'This game URL is already in your list';
+                }
+            });
+            
+            // Add player alias to the list
+            addAliasButton.addEventListener('click', function() {
+                const alias = playerAliasInput.value.trim();
+                if (alias && !aliases.includes(alias)) {
+                    aliases.push(alias);
+                    renderAliasesList();
+                    playerAliasInput.value = '';
+                }
+            });
+            
+            // Start tracking
+            startTrackingButton.addEventListener('click', function() {
+                // Validate player name
+                const playerName = playerNameInput.value.trim();
+                playerNameError.textContent = '';
+                
+                if (!playerName) {
+                    playerNameError.textContent = 'Please enter your player name';
+                    return;
+                }
+                
+                // Validate at least one game
+                if (games.length === 0) {
+                    gameUrlError.textContent = 'Please add at least one game URL';
+                    return;
+                }
+                
+                // Update graph title with player name
+                document.getElementById('player-name-title').textContent = playerName;
+                
+                // Prepare data to send
+                const data = {
+                    playerName: playerName,
+                    games: games,
+                    aliases: aliases
+                };
+                
+                // Send request to start tracking
+                fetch('/start_tracking', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        playerNameError.textContent = data.error;
+                        return;
+                    }
+                    
+                    // Hide setup, show results
+                    setupSection.style.display = 'none';
+                    resultsSection.style.display = 'block';
+                    startTrackingButton.style.display = 'none';
+                    stopTrackingButton.style.display = 'inline-block';
+                    
+                    // Show loading
+                    loading.style.display = 'block';
+                    
+                    // Initialize result section game and alias lists
+                    renderGamesListResults();
+                    renderAliasesListResults();
+                    
+                    // Set tracking flag
+                    isTracking = true;
+                    
+                    // Start polling for results
+                    startResultsPolling();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    playerNameError.textContent = 'Error starting tracking: ' + error.message;
+                });
+            });
+            
+            // Stop tracking
+            stopTrackingButton.addEventListener('click', function() {
+                fetch('/stop_tracking', {
+                    method: 'POST',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    isTracking = false;
+                    stopResultsPolling();
+                    setupSection.style.display = 'block';
+                    resultsSection.style.display = 'none';
+                    startTrackingButton.style.display = 'inline-block';
+                    stopTrackingButton.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+            
+            // Render the games list
+            function renderGamesList() {
+                gamesList.innerHTML = '';
+                games.forEach((game, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'game-item';
+                    
+                    const gameLink = document.createElement('div');
+                    gameLink.className = 'game-link';
+                    gameLink.textContent = game.url;
+                    li.appendChild(gameLink);
+                    
+                    // Add cents toggle
+                    const centsToggle = document.createElement('div');
+                    centsToggle.className = 'cents-toggle';
+                    centsToggle.innerHTML = `
+                        <label class="cents-label">
+                            <input type="checkbox" 
+                                   ${game.isInCents ? 'checked' : ''} 
+                                   class="cents-checkbox">
+                            Uses cents
+                        </label>
+                    `;
+                    
+                    // Add event listener for checkbox
+                    const checkbox = centsToggle.querySelector('input');
+                    checkbox.addEventListener('change', (e) => {
+                        games[index].isInCents = e.target.checked;
+                        if (isTracking) {
+                            // If tracking is active, update the results immediately
+                            pollResults();
+                        }
+                    });
+                    
+                    li.appendChild(centsToggle);
+                    
+                    const removeButton = document.createElement('button');
+                    removeButton.className = 'remove';
+                    removeButton.textContent = 'Remove';
+                    removeButton.addEventListener('click', function() {
+                        games.splice(index, 1);
+                        renderGamesList();
+                        if (gamesListResults) {
+                            renderGamesListResults();
+                        }
+                    });
+                    li.appendChild(removeButton);
+                    
+                    gamesList.appendChild(li);
+                });
+            }
+            
+            // Render the aliases list
+            function renderAliasesList() {
+                aliasList.innerHTML = '';
+                aliases.forEach((alias, index) => {
+                    const aliasTag = document.createElement('div');
+                    aliasTag.className = 'alias-tag';
+                    aliasTag.innerHTML = `
+                        ${alias} 
+                        <span class="remove-alias" title="Remove alias">✕</span>
+                    `;
+                    
+                    aliasTag.querySelector('.remove-alias').addEventListener('click', function() {
+                        aliases.splice(index, 1);
+                        renderAliasesList();
+                        if (aliasListResults) {
+                            renderAliasesListResults();
+                        }
+                    });
+                    
+                    aliasList.appendChild(aliasTag);
+                });
+            }
+            
+            // Start polling for results
+            function startResultsPolling() {
+                // First immediate poll
+                pollResults();
+                
+                // Then every 5 seconds
+                resultsPollingInterval = setInterval(pollResults, 5000);
+            }
+            
+            // Stop polling for results
+            function stopResultsPolling() {
+                if (resultsPollingInterval) {
+                    clearInterval(resultsPollingInterval);
+                    resultsPollingInterval = null;
+                }
+            }
+            
+            // Poll for results
+            function pollResults() {
+                if (!tracking_results || Object.keys(tracking_results?.results || {}).length === 0) {
+                    loading.style.display = 'block';
+                }
+                
+                fetch('/get_results')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Hide loading as soon as we get a valid response
+                        loading.style.display = 'none';
+                        
+                        console.log('Received data from server:', data);  // Debug log
+                        
+                        if (data.tracking_results && data.tracking_results.results) {
+                            tracking_results = data.tracking_results;
+                            console.log('Updating table with:', tracking_results);  // Debug log
+                            updateResultsTable(data.tracking_results);
+                            createOrUpdateCharts(data.tracking_results);
+                            updateLastScrapeTime(data.last_scrape_time, data.time_since_scrape_seconds);
+                        } else {
+                            console.log('No valid tracking results in data');  // Debug log
+                        }
+                        
+                        const errorDisplay = document.getElementById('tracking-error');
+                        if (data.error) {
+                            errorDisplay.textContent = data.error;
+                            errorDisplay.style.display = 'block';
+                        } else {
+                            errorDisplay.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error polling results:', error);
+                        document.getElementById('tracking-error').textContent = 'Error connecting to server: ' + error.message;
+                        document.getElementById('tracking-error').style.display = 'block';
+                    });
+            }
+            
+            // Update results table
+            function updateResultsTable(trackingResults) {
+                resultsBody.innerHTML = '';
+                
+                // Add each game result
+                const gameResults = trackingResults.results;
+                Object.keys(gameResults).forEach(gameUrl => {
+                    const profit = gameResults[gameUrl];
+                    const row = document.createElement('tr');
+                    
+                    const gameCell = document.createElement('td');
+                    gameCell.textContent = gameUrl;
+                    row.appendChild(gameCell);
+                    
+                    const profitCell = document.createElement('td');
+                    
+                    // Check if profit is a string (error message) or a number
+                    if (typeof profit === 'string' && profit.startsWith('ERROR')) {
+                        profitCell.className = 'game-profit error';
+                        profitCell.style.color = 'var(--secondary-color)';
+                        profitCell.textContent = profit;
+                    } else if (typeof profit === 'number' || !isNaN(parseFloat(profit))) {
+                        const game = games.find(g => g.url === gameUrl);
+                        let profitValue = typeof profit === 'number' ? profit : parseFloat(profit);
+                        
+                        // Convert if game is in cents
+                        if (game && game.isInCents) {
+                            profitValue = profitValue / 100;
+                        }
+                        
+                        profitCell.className = profitValue >= 0 ? 'game-profit positive' : 'game-profit negative';
+                        profitCell.textContent = formatProfit(profitValue);
+                    } else {
+                        profitCell.className = 'game-profit error';
+                        profitCell.style.color = 'var(--secondary-color)';
+                        profitCell.textContent = profit;
+                    }
+                    
+                    row.appendChild(profitCell);
+                    resultsBody.appendChild(row);
+                });
+                
+                // Calculate total profit/loss considering cents conversion
+                let totalProfitValue = 0;
+                Object.entries(gameResults).forEach(([gameUrl, profit]) => {
+                    if (typeof profit === 'number' || !isNaN(parseFloat(profit))) {
+                        const game = games.find(g => g.url === gameUrl);
+                        let profitValue = typeof profit === 'number' ? profit : parseFloat(profit);
+                        
+                        // Convert if game is in cents
+                        if (game && game.isInCents) {
+                            profitValue = profitValue / 100;
+                        }
+                        
+                        totalProfitValue += profitValue;
+                    }
+                });
+                
+                // Update total profit/loss
+                if (trackingResults.has_errors) {
+                    totalProfit.textContent = `${formatProfit(totalProfitValue)} (Some games had errors)`;
+                } else {
+                    totalProfit.textContent = formatProfit(totalProfitValue);
+                }
+                
+                totalRow.className = totalProfitValue >= 0 ? 'total-row positive' : 'total-row negative';
+            }
+            
+            // Format profit/loss
+            function formatProfit(value) {
+                const prefix = value >= 0 ? '+' : '';
+                return `${prefix}$${Math.abs(value).toFixed(2)}`;
+            }
+            
+            // Update last scrape time
+            function updateLastScrapeTime(scrapeTime, secondsSinceScrape) {
+                if (!scrapeTime) {
+                    lastScrape.textContent = 'Last scrape: Never';
+                    return;
+                }
+                
+                // Format the scrape time
+                const date = new Date(scrapeTime);
+                const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // Calculate time since last scrape
+                let timeSince = '';
+                if (secondsSinceScrape) {
+                    if (secondsSinceScrape < 60) {
+                        timeSince = `${Math.floor(secondsSinceScrape)} seconds ago`;
+                    } else if (secondsSinceScrape < 3600) {
+                        timeSince = `${Math.floor(secondsSinceScrape / 60)} minutes ago`;
+                    } else {
+                        timeSince = `${Math.floor(secondsSinceScrape / 3600)} hours ago`;
+                    }
+                }
+                
+                lastScrape.textContent = `Last scrape: ${formattedTime} (${timeSince})`;
+                
+                // Next scrape in... (using 60 seconds interval)
+                const remainingSeconds = Math.round(60 - (secondsSinceScrape % 60));
+                if (remainingSeconds < 60) {
+                    lastScrape.textContent += ` • Next scrape in: ${remainingSeconds}s`;
+                }
+            }
+            
+            // Add game URL to the list (from results page)
+            addGameResultsButton.addEventListener('click', function() {
+                const gameUrl = gameUrlResultsInput.value.trim();
+                
+                if (!gameUrl) {
+                    alert('Please enter a game URL');
+                    return;
+                }
+                
+                if (!gameUrl.includes('pokernow.club/games/')) {
+                    alert('URL must be from pokernow.club/games/');
+                    return;
+                }
+                
+                // Add to games array if not already there
+                if (!games.some(game => game.url === gameUrl)) {
+                    games.push({ url: gameUrl, isInCents: false });
+                    renderGamesListResults();
+                    gameUrlResultsInput.value = '';
+                    
+                    // If tracking, update server
+                    if (isTracking) {
+                        updateGamesOnServer();
+                    }
+                } else {
+                    alert('This game URL is already in your list');
+                }
+            });
+            
+            // Add player alias to the list (from results page)
+            addAliasResultsButton.addEventListener('click', function() {
+                const alias = playerAliasResultsInput.value.trim();
+                if (alias && !aliases.includes(alias)) {
+                    aliases.push(alias);
+                    renderAliasesListResults();
+                    playerAliasResultsInput.value = '';
+                    
+                    // If tracking, update server
+                    if (isTracking) {
+                        updateAliasesOnServer();
+                    }
+                }
+            });
+            
+            // Update games on server
+            function updateGamesOnServer() {
+                fetch('/update_games', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        games: games
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error updating games: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            // Update aliases on server
+            function updateAliasesOnServer() {
+                fetch('/update_aliases', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        aliases: aliases
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error updating aliases: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            // Render the games list (in results section)
+            function renderGamesListResults() {
+                gamesListResults.innerHTML = '';
+                games.forEach((game, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'game-item';
+                    
+                    const gameLink = document.createElement('div');
+                    gameLink.className = 'game-link';
+                    gameLink.textContent = game.url;
+                    li.appendChild(gameLink);
+                    
+                    // Add cents toggle
+                    const centsToggle = document.createElement('div');
+                    centsToggle.className = 'cents-toggle';
+                    centsToggle.innerHTML = `
+                        <label class="cents-label">
+                            <input type="checkbox" 
+                                   ${game.isInCents ? 'checked' : ''} 
+                                   class="cents-checkbox">
+                            Uses cents
+                        </label>
+                    `;
+                    
+                    // Add event listener for checkbox
+                    const checkbox = centsToggle.querySelector('input');
+                    checkbox.addEventListener('change', (e) => {
+                        games[index].isInCents = e.target.checked;
+                        // Update results immediately when toggle changes
+                        pollResults();
+                    });
+                    
+                    li.appendChild(centsToggle);
+                    
+                    const removeButton = document.createElement('button');
+                    removeButton.className = 'remove';
+                    removeButton.textContent = 'Remove';
+                    removeButton.addEventListener('click', function() {
+                        games.splice(index, 1);
+                        renderGamesList();
+                        renderGamesListResults();
+                        
+                        // If tracking, update server
+                        if (isTracking) {
+                            updateGamesOnServer();
+                        }
+                    });
+                    li.appendChild(removeButton);
+                    
+                    gamesListResults.appendChild(li);
+                });
+            }
+            
+            // Render the aliases list (in results section)
+            function renderAliasesListResults() {
+                aliasListResults.innerHTML = '';
+                aliases.forEach((alias, index) => {
+                    const aliasTag = document.createElement('div');
+                    aliasTag.className = 'alias-tag';
+                    aliasTag.innerHTML = `
+                        ${alias} 
+                        <span class="remove-alias" title="Remove alias">✕</span>
+                    `;
+                    
+                    aliasTag.querySelector('.remove-alias').addEventListener('click', function() {
+                        aliases.splice(index, 1);
+                        renderAliasesList();
+                        renderAliasesListResults();
+                        
+                        // If tracking, update server
+                        if (isTracking) {
+                            updateAliasesOnServer();
+                        }
+                    });
+                    
+                    aliasListResults.appendChild(aliasTag);
+                });
+            }
+            
+            // Add event listener for Enter key in game URL input (setup page)
+            gameUrlInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addGameButton.click();
+                }
+            });
+            
+            // Add event listener for Enter key in player alias input (setup page)
+            playerAliasInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addAliasButton.click();
+                }
+            });
+            
+            // Add event listener for Enter key in game URL input (results page)
+            gameUrlResultsInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addGameResultsButton.click();
+                }
+            });
+            
+            // Add event listener for Enter key in player alias input (results page)
+            playerAliasResultsInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addAliasResultsButton.click();
+                }
+            });
+            
+            function createOrUpdateCharts(data) {
+                const timestamps = data.history.timestamps;
+                const totalProfits = data.history.total_profits;
+                
+                // Format timestamps for display
+                const labels = timestamps.map(ts => {
+                    const date = new Date(ts);
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                });
+                
+                // If we only have one data point, create a leading line
+                let chartLabels = [...labels];
+                let chartData = [...totalProfits];
+                
+                if (totalProfits.length === 1) {
+                    // Add a point 25% of the way from the left
+                    const leadingTime = new Date(new Date(timestamps[0]).getTime() - 15 * 60000); // 15 minutes before
+                    chartLabels.unshift(leadingTime.toLocaleTimeString());
+                    chartData.unshift(0); // Start from 0
+                }
+                
+                // Create or update total profit chart
+                if (!totalProfitChart) {
+                    const ctx = document.getElementById('totalProfitGraph').getContext('2d');
+                    totalProfitChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: chartLabels,
+                            datasets: [{
+                                label: 'Total Profit/Loss',
+                                data: chartData,
+                                borderColor: function(context) {
+                                    const value = context.raw;
+                                    return value >= 0 ? '#2ecc71' : '#e74c3c';
+                                },
+                                segment: {
+                                    borderColor: function(context) {
+                                        const value = context.p1.parsed.y;
+                                        return value >= 0 ? '#2ecc71' : '#e74c3c';
+                                    }
+                                },
+                                tension: 0.1,
+                                fill: false
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.1)'
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    totalProfitChart.data.labels = chartLabels;
+                    totalProfitChart.data.datasets[0].data = chartData;
+                    totalProfitChart.update();
+                }
+            }
+        });
+    </script>
+</body>
+</html> 
