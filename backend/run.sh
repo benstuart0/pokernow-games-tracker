@@ -8,41 +8,10 @@ NC='\033[0m' # No Color
 
 echo "${YELLOW}PokerNow Games Tracker Backend Setup${NC}"
 
-# Check for Chrome or Firefox
-echo "Checking for web browsers..."
-CHROME_FOUND=0
-FIREFOX_FOUND=0
-
-if [ -d "/Applications/Google Chrome.app" ]; then
-  echo "${GREEN}✓ Google Chrome found${NC}"
-  CHROME_FOUND=1
-elif [ -d "/Applications/Chrome.app" ]; then
-  echo "${GREEN}✓ Chrome found${NC}"
-  CHROME_FOUND=1
-else
-  echo "${YELLOW}⚠ Chrome not found in standard locations${NC}"
-fi
-
-if [ -d "/Applications/Firefox.app" ]; then
-  echo "${GREEN}✓ Firefox found${NC}"
-  FIREFOX_FOUND=1
-else
-  echo "${YELLOW}⚠ Firefox not found${NC}"
-fi
-
-if [ $CHROME_FOUND -eq 0 ] && [ $FIREFOX_FOUND -eq 0 ]; then
-  echo "${RED}✗ No supported browsers found. Please install Chrome or Firefox.${NC}"
-  echo "The application requires a browser to function."
-  exit 1
-fi
-
-# Move to backend directory
-cd backend || exit 1
-
 # Check if venv exists, if not create it
-if [ ! -d "venv" ]; then
+if [ ! -d "../venv" ]; then
   echo "${YELLOW}Creating virtual environment...${NC}"
-  python3 -m venv venv
+  python3 -m venv ../venv
   if [ $? -ne 0 ]; then
     echo "${RED}Failed to create virtual environment. Please ensure Python 3.6+ is installed.${NC}"
     exit 1
@@ -54,7 +23,7 @@ fi
 
 # Activate the virtual environment
 echo "Activating virtual environment..."
-source venv/bin/activate
+source ../venv/bin/activate
 if [ $? -ne 0 ]; then
   echo "${RED}Failed to activate virtual environment.${NC}"
   exit 1

@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 from urllib.parse import urlparse
 import requests
 from requests.adapters import HTTPAdapter
@@ -7,7 +7,18 @@ from urllib3.util.retry import Retry
 
 
 class PokerNowAPIScraper:
-    def __init__(self, max_retries=3, backoff_factor=0.5):
+    def __init__(self,
+                 player_name: str,
+                 game_urls: List[str],
+                 aliases: List[str] = None,
+                 games_in_cents: Dict[str,
+                                      bool] = None,
+                 max_retries=3,
+                 backoff_factor=0.5):
+        self.player_name = player_name
+        self.game_urls = game_urls
+        self.aliases = aliases or []
+
         self.session = requests.Session()
 
         # Configure retry strategy
@@ -24,6 +35,39 @@ class PokerNowAPIScraper:
 
         # Set up logging
         self.logger = logging.getLogger("PokerNowAPIScraper")
+
+    def get_results(self) -> Dict:
+        """Get the latest results for all games."""
+        results = {
+            'results': {},
+            'total_profit': 0.0,
+            'has_errors': False
+        }
+
+        if not self.game_urls:
+            results['has_errors'] = True
+            return results
+
+        for game_url in self.game_urls:
+            try:
+                profit = self.scrape_game(game_url, self.player_name, self.aliases)
+
+                # Handle error cases
+                if isinstance(profit, str) and profit.startswith('ERROR'):
+                    self.logger.error(f"Error for game {game_url}: {profit}")
+                    results['results'][game_url] = profit
+                    results['has_errors'] = True
+                    continue
+
+                results['total_profit'] += profit
+                results['results'][game_url] = profit
+
+            except Exception as e:
+                self.logger.error(f"Error processing game {game_url}: {str(e)}")
+                results['results'][game_url] = f"ERROR: Unexpected error - {str(e)}"
+                results['has_errors'] = True
+
+        return results
 
     def extract_game_id(self, game_url: str) -> Optional[str]:
         """Extract the game ID from a PokerNow URL."""
@@ -47,12 +91,12 @@ class PokerNowAPIScraper:
         Fetch game data using the PokerNow API and return profit/loss for the player.
 
         Args:
-            game_url (str): URL of the PokerNow game
-            player_name (str): Name of the player to look for
-            aliases (List[str]): List of alternative names for the player
+            game_url: URL of the PokerNow game
+            player_name: Name of the player to look for
+            aliases: List of alternative names for the player
 
         Returns:
-            Union[float, str]: The profit/loss amount as a float, or an error message as a string
+            The raw profit/loss amount as a float, or an error message as a string
         """
         try:
             # Extract game ID from URL
@@ -83,7 +127,8 @@ class PokerNowAPIScraper:
                 # Check if any of the player's names match our search names
                 if any(search_name in player_names for search_name in search_names):
                     net_result = float(player_data['net'])
-                    self.logger.info(f"Found player: {player_data['names']} with net result: ${net_result:,.2f}")
+                    self.logger.info(
+                        f"Found player: {player_data['names']} with net result: {net_result}")
                     return net_result
 
             return "ERROR: Player not found in game"
