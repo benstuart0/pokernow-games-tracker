@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Chart, ChartConfiguration } from 'chart.js/auto';
+import { Chart, ChartConfiguration, ScriptableContext, ScriptableLineSegmentContext } from 'chart.js/auto';
 
 interface ProfitGraphProps {
   history: {
@@ -39,15 +39,14 @@ export default function ProfitGraph({ history }: ProfitGraphProps) {
         datasets: [{
           label: 'Total Profit/Loss',
           data: chartData,
-          borderColor: (ctx) => {
+          borderColor: (ctx: ScriptableContext<'line'>) => {
             const value = chartData[ctx.dataIndex];
             return value >= 0 ? '#2ecc71' : '#e74c3c';
           },
           segment: {
-            borderColor: (ctx) => {
-              const index = ctx.p1DataIndex;
-              const value = chartData[index];
-              return value >= 0 ? '#2ecc71' : '#e74c3c';
+            borderColor: (ctx: ScriptableLineSegmentContext) => {
+              const index = ctx.p1.parsed.y !== undefined ? ctx.p1.parsed.y : 0;
+              return index >= 0 ? '#2ecc71' : '#e74c3c';
             }
           },
           tension: 0.1,
