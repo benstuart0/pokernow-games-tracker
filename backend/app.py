@@ -5,6 +5,7 @@ import logging
 from functools import wraps
 import time
 from collections import defaultdict
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -110,6 +111,14 @@ def get_results():
                 'has_errors': True
             }
         }), 500
+
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat()
+    }), 200
 
 
 if __name__ == '__main__':
