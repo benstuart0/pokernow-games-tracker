@@ -11,13 +11,13 @@ class PokerNowAPIScraper:
                  player_name: str,
                  game_urls: List[str],
                  aliases: List[str] = None,
-                 games_in_cents: Dict[str,
-                                      bool] = None,
+                 games_in_cents: Dict[str, bool] = None,
                  max_retries=3,
                  backoff_factor=0.5):
         self.player_name = player_name
         self.game_urls = game_urls
         self.aliases = aliases or []
+        self.games_in_cents = games_in_cents or {}
 
         self.session = requests.Session()
 
@@ -38,6 +38,8 @@ class PokerNowAPIScraper:
 
     def get_results(self) -> Dict:
         """Get the latest results for all games."""
+        self.logger.info(f"Starting to fetch results for {len(self.game_urls)} games")
+        
         results = {
             'results': {},
             'total_profit': 0.0,
@@ -45,25 +47,28 @@ class PokerNowAPIScraper:
         }
 
         if not self.game_urls:
+            self.logger.warning("No game URLs provided")
             results['has_errors'] = True
             return results
 
         for game_url in self.game_urls:
             try:
+                self.logger.info(f"Processing game: {game_url}")
                 profit = self.scrape_game(game_url, self.player_name, self.aliases)
 
                 # Handle error cases
                 if isinstance(profit, str) and profit.startswith('ERROR'):
-                    self.logger.error(f"Error for game {game_url}: {profit}")
+                    self.logger.warning(f"Error for game {game_url}: {profit}")
                     results['results'][game_url] = profit
                     results['has_errors'] = True
                     continue
 
                 results['total_profit'] += profit
                 results['results'][game_url] = profit
+                self.logger.info(f"Successfully processed game {game_url}: {profit}")
 
             except Exception as e:
-                self.logger.error(f"Error processing game {game_url}: {str(e)}")
+                self.logger.error(f"Error processing game {game_url}: {str(e)}", exc_info=True)
                 results['results'][game_url] = f"ERROR: Unexpected error - {str(e)}"
                 results['has_errors'] = True
 
@@ -80,7 +85,10 @@ class PokerNowAPIScraper:
             if 'games' in path_parts:
                 games_index = path_parts.index('games')
                 if len(path_parts) > games_index + 1:
-                    return path_parts[games_index + 1]
+                    game_id = path_parts[games_index + 1]
+                    self.logger.debug(f"Extracted game ID: {game_id}")
+                    return game_id
+            self.logger.warning(f"Could not extract game ID from URL: {game_url}")
             return None
         except Exception as e:
             self.logger.error(f"Error extracting game ID: {e}")
@@ -113,20 +121,24 @@ class PokerNowAPIScraper:
                 response = self.session.get(api_url, timeout=10)  # Add timeout
                 response.raise_for_status()
             except requests.exceptions.Timeout:
+                self.logger.warning(f"Request timed out for game: {game_url}")
                 return "ERROR: Request timed out"
             except requests.exceptions.RequestException as e:
+                self.logger.warning(f"Network error for game {game_url}: {str(e)}")
                 return f"ERROR: Network error - {str(e)}"
 
             # Parse the JSON response
             try:
                 data = response.json()
             except ValueError as e:
+                self.logger.warning(f"Invalid JSON response for game {game_url}: {str(e)}")
                 return f"ERROR: Invalid response format - {str(e)}"
 
             # Create a list of all names to search for (player name + aliases)
             search_names = [player_name.lower()]
             if aliases:
                 search_names.extend([alias.lower() for alias in aliases])
+            self.logger.debug(f"Searching for names: {search_names}")
 
             # Search through players
             for player_id, player_data in data['playersInfos'].items():
@@ -136,13 +148,15 @@ class PokerNowAPIScraper:
                 if any(search_name in player_names for search_name in search_names):
                     net_result = float(player_data['net'])
                     self.logger.info(
-                        f"Found player: {player_data['names']} with net result: {net_result}")
+                        f"Found player {player_data['names']} with net result: {net_result}"
+                    )
                     return net_result
 
+            self.logger.warning(f"Player not found in game: {game_url}")
             return "ERROR: Player not found in game"
 
         except Exception as e:
-            self.logger.error(f"Unexpected error for {game_url}: {e}")
+            self.logger.error(f"Unexpected error for {game_url}: {e}", exc_info=True)
             return f"ERROR: Unexpected error - {str(e)}"
 
     def close(self):

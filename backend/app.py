@@ -7,13 +7,24 @@ import time
 from collections import defaultdict
 from datetime import datetime
 import os
+import sys
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with proper levels and formatting
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
+
+# Set log levels for various loggers to reduce noise
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 # Simple rate limiting
 RATE_LIMIT = 60  # requests per minute
@@ -33,10 +44,12 @@ def rate_limit(f):
 
         # Check rate limit
         if rate_limit_data[ip]['count'] >= RATE_LIMIT:
+            logger.warning(f"Rate limit exceeded for IP: {ip}")
             return jsonify({'error': 'Rate limit exceeded. Please wait a minute.'}), 429
 
         # Increment counter
         rate_limit_data[ip]['count'] += 1
+        logger.debug(f"Request count for IP {ip}: {rate_limit_data[ip]['count']}")
 
         return f(*args, **kwargs)
     return decorated_function
@@ -75,15 +88,20 @@ def validate_request_data(data):
 def get_results():
     try:
         data = request.get_json()
+        logger.info(f"Processing request for player: {data.get('playerName', 'unknown')}")
 
         # Validate request data
         error = validate_request_data(data)
         if error:
+            logger.warning(f"Invalid request data: {error}")
             return jsonify({'error': error}), 400
 
         player_name = data['playerName']
         games = data['games']
         aliases = data.get('aliases', [])
+
+        logger.info(f"Fetching results for {len(games)} games")
+        logger.debug(f"Game URLs: {[game['url'] for game in games]}")
 
         # Create a new scraper instance for this request
         scraper = PokerNowAPIScraper(
@@ -95,6 +113,11 @@ def get_results():
 
         try:
             results = scraper.get_results()
+            if results.get('has_errors'):
+                logger.warning(f"Some games had errors: {results['results']}")
+            else:
+                logger.info(f"Successfully processed all games for {player_name}")
+            
             return jsonify({
                 'error': None,
                 'results': results
@@ -103,7 +126,7 @@ def get_results():
             scraper.close()
 
     except Exception as e:
-        logger.error(f"Error in get_results: {str(e)}")
+        logger.error(f"Error in get_results: {str(e)}", exc_info=True)
         return jsonify({
             'error': str(e),
             'results': {
@@ -117,6 +140,7 @@ def get_results():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint for Railway deployment"""
+    logger.debug("Health check requested")
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat()

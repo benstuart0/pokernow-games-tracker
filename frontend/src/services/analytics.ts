@@ -1,9 +1,23 @@
 import posthog from 'posthog-js'
 
-// Initialize PostHog
-posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
-    api_host: 'https://app.posthog.com'
+// Initialize PostHog with write key
+posthog.init('phc_G8A6QzlUE4dce3rSTgR0YTZQ5p6fpc6lodgFbDAhyM7', {
+    api_host: 'https://app.posthog.com',
+    persistence: 'localStorage',
+    autocapture: false,
+    capture_pageview: true,
+    capture_pageleave: true,
+    disable_session_recording: true,
+    loaded: (posthog) => {
+        console.log('PostHog loaded successfully');
+        posthog.capture('app_loaded');
+    }
 })
+
+// Enable debug mode in development
+if (import.meta.env.DEV) {
+    posthog.debug();
+}
 
 interface TrackingData {
     playerName: string;
@@ -21,14 +35,22 @@ interface ErrorContext {
     [key: string]: unknown;
 }
 
+const logEvent = (eventName: string, properties: Record<string, unknown>) => {
+    if (import.meta.env.DEV) {
+        console.log(`[PostHog Event] ${eventName}:`, properties);
+    }
+};
+
 export const trackStartTracking = (data: TrackingData) => {
-    posthog.capture('start_tracking', {
+    const properties = {
         ...data,
         timestamp: new Date().toISOString(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         userAgent: navigator.userAgent,
         screenSize: `${window.innerWidth}x${window.innerHeight}`
-    })
+    };
+    logEvent('start_tracking', properties);
+    posthog.capture('start_tracking', properties);
 }
 
 export const trackStopTracking = (data: TrackingData & { 
@@ -36,40 +58,50 @@ export const trackStopTracking = (data: TrackingData & {
     finalProfit: number;
     hasErrors: boolean;
 }) => {
-    posthog.capture('stop_tracking', {
+    const properties = {
         ...data,
         timestamp: new Date().toISOString()
-    })
+    };
+    logEvent('stop_tracking', properties);
+    posthog.capture('stop_tracking', properties);
 }
 
 export const trackError = (error: string, context: ErrorContext) => {
-    posthog.capture('error', {
+    const properties = {
         error,
         context,
         timestamp: new Date().toISOString(),
         url: window.location.href
-    })
+    };
+    logEvent('error', properties);
+    posthog.capture('error', properties);
 }
 
 export const trackGameAdded = (gameUrl: string, isInCents: boolean) => {
-    posthog.capture('game_added', {
+    const properties = {
         gameUrl,
         isInCents,
         timestamp: new Date().toISOString()
-    })
+    };
+    logEvent('game_added', properties);
+    posthog.capture('game_added', properties);
 }
 
 export const trackGameRemoved = (gameUrl: string) => {
-    posthog.capture('game_removed', {
+    const properties = {
         gameUrl,
         timestamp: new Date().toISOString()
-    })
+    };
+    logEvent('game_removed', properties);
+    posthog.capture('game_removed', properties);
 }
 
 export const trackCentsToggled = (gameUrl: string, isInCents: boolean) => {
-    posthog.capture('cents_toggled', {
+    const properties = {
         gameUrl,
         isInCents,
         timestamp: new Date().toISOString()
-    })
+    };
+    logEvent('cents_toggled', properties);
+    posthog.capture('cents_toggled', properties);
 } 
