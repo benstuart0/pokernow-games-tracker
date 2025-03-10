@@ -14,9 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application
 COPY . .
 
-# Create a script to start the application
-RUN echo '#!/bin/bash\nport="${PORT:-8000}"\ngunicorn app:app --bind 0.0.0.0:$port' > start.sh && \
-    chmod +x start.sh
+# Default to port 8000
+ENV PORT=8000
 
 # Command to run the application
-CMD ["./start.sh"] 
+CMD exec gunicorn --bind :$PORT app:app 
