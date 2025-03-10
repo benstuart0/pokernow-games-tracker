@@ -51,6 +51,12 @@ def validate_request_data(data):
     if not player_name or not isinstance(player_name, str) or len(player_name.strip()) == 0:
         return 'Player name is required and must be a non-empty string'
 
+    aliases = data.get('aliases', [])
+    if not isinstance(aliases, list):
+        return 'Aliases must be a list of strings'
+    if any(not isinstance(alias, str) for alias in aliases):
+        return 'All aliases must be strings'
+
     games = data.get('games', [])
     if not isinstance(games, list) or len(games) == 0:
         return 'At least one game URL is required'
@@ -60,12 +66,6 @@ def validate_request_data(data):
             return 'Each game must have a url and isInCents field'
         if not isinstance(game['url'], str) or not isinstance(game['isInCents'], bool):
             return 'Game url must be a string and isInCents must be a boolean'
-
-    aliases = data.get('aliases', [])
-    if not isinstance(aliases, list):
-        return 'Aliases must be a list of strings'
-    if any(not isinstance(alias, str) for alias in aliases):
-        return 'All aliases must be strings'
 
     return None
 

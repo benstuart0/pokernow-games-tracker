@@ -1,6 +1,8 @@
 import axios from 'axios';
-import { apiUrl } from '../config';
 import { Game, ApiResponse } from '../types';
+
+// Get the API URL from environment variables
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
     baseURL: apiUrl,
@@ -10,7 +12,7 @@ const api = axios.create({
 });
 
 export const getResults = async (playerName: string, games: Game[], aliases: string[] = []): Promise<ApiResponse> => {
-    const response = await api.post<ApiResponse>('/get_results', {
+    const response = await api.post<ApiResponse>('/api/get_results', {
         playerName,
         games,
         aliases
@@ -23,6 +25,9 @@ api.interceptors.response.use(
     response => response,
     error => {
         console.error('API Error:', error);
+        if (error.code === 'ERR_NETWORK') {
+            error.message = 'Unable to connect to server. Please check your internet connection.';
+        }
         return Promise.reject(error);
     }
 ); 

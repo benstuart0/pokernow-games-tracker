@@ -109,11 +109,19 @@ class PokerNowAPIScraper:
 
             # Make the API request with automatic retries
             self.logger.info(f"Fetching data from: {api_url}")
-            response = self.session.get(api_url, timeout=10)  # Add timeout
-            response.raise_for_status()  # Raise exception for bad status codes
+            try:
+                response = self.session.get(api_url, timeout=10)  # Add timeout
+                response.raise_for_status()
+            except requests.exceptions.Timeout:
+                return "ERROR: Request timed out"
+            except requests.exceptions.RequestException as e:
+                return f"ERROR: Network error - {str(e)}"
 
             # Parse the JSON response
-            data = response.json()
+            try:
+                data = response.json()
+            except ValueError as e:
+                return f"ERROR: Invalid response format - {str(e)}"
 
             # Create a list of all names to search for (player name + aliases)
             search_names = [player_name.lower()]
@@ -133,15 +141,6 @@ class PokerNowAPIScraper:
 
             return "ERROR: Player not found in game"
 
-        except requests.exceptions.Timeout:
-            self.logger.error(f"Timeout error for {game_url}")
-            return "ERROR: Request timed out"
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Network error for {game_url}: {e}")
-            return f"ERROR: Network error - {str(e)}"
-        except ValueError as e:
-            self.logger.error(f"Error parsing response for {game_url}: {e}")
-            return f"ERROR: Invalid response format - {str(e)}"
         except Exception as e:
             self.logger.error(f"Unexpected error for {game_url}: {e}")
             return f"ERROR: Unexpected error - {str(e)}"
