@@ -6,6 +6,7 @@ from functools import wraps
 import time
 from collections import defaultdict
 from datetime import datetime
+import os
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -115,6 +116,7 @@ def get_results():
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
+    """Health check endpoint for Railway deployment"""
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat()
@@ -122,8 +124,5 @@ def health_check():
 
 
 if __name__ == '__main__':
-    # Try port 8080 first, then 8090
-    try:
-        app.run(port=8080, debug=True)
-    except OSError:
-        app.run(port=8090, debug=True)
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)

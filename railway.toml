@@ -1,0 +1,16 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[deploy.envs]
+FLASK_ENV = "production"
+PYTHONUNBUFFERED = "1"
+
+[[services]]
+name = "pokernow-tracker-backend"
+rootDirectory = "backend" 
