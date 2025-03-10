@@ -5,6 +5,8 @@ interface GamesListProps {
   setGames: (games: Game[]) => void;
   isResults: boolean;
   onUpdateGames?: () => void;
+  onRemoveGame?: (gameUrl: string) => void;
+  onToggleCents?: (gameUrl: string, isInCents: boolean) => void;
 }
 
 export default function GamesList({
@@ -12,22 +14,32 @@ export default function GamesList({
   setGames,
   isResults,
   onUpdateGames,
+  onRemoveGame,
+  onToggleCents,
 }: GamesListProps) {
   const handleRemoveGame = (index: number) => {
+    const gameUrl = games[index].url;
     const newGames = games.filter((_, i) => i !== index);
     setGames(newGames);
     if (isResults && onUpdateGames) {
       onUpdateGames();
     }
+    if (onRemoveGame) {
+      onRemoveGame(gameUrl);
+    }
   };
 
   const handleToggleCents = (index: number) => {
-    const newGames = games.map((game, i) =>
-      i === index ? { ...game, isInCents: !game.isInCents } : game
+    const game = games[index];
+    const newGames = games.map((g, i) =>
+      i === index ? { ...g, isInCents: !g.isInCents } : g
     );
     setGames(newGames);
     if (isResults && onUpdateGames) {
       onUpdateGames();
+    }
+    if (onToggleCents) {
+      onToggleCents(game.url, !game.isInCents);
     }
   };
 

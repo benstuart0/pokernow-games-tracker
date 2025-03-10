@@ -6,6 +6,7 @@ import ResultsTable from './ResultsTable';
 import ProfitGraph from './ProfitGraph';
 import LoadingSpinner from './LoadingSpinner';
 import * as api from '../services/api';
+import { trackStopTracking, trackGameAdded, trackGameRemoved, trackCentsToggled } from '../services/analytics';
 
 interface ResultsSectionProps {
   games: Game[];
@@ -42,6 +43,7 @@ export default function ResultsSection({
   });
   const [lastGameSettings, setLastGameSettings] = useState<Record<string, GameProfitInfo>>({});
   const [debugMode, setDebugMode] = useState(false);
+  const [startTime] = useState<number>(Date.now());
 
   const logDebug = useCallback((message: string, details?: unknown) => {
     if (debugMode) {
@@ -209,6 +211,25 @@ export default function ResultsSection({
     };
   }, [pollResults]);
 
+  const handleStopTracking = () => {
+    if (trackingResults) {
+      const duration = Math.round((Date.now() - startTime) / 1000); // Convert to seconds
+      const finalProfit = calculateTotalProfit(trackingResults.results);
+      
+      trackStopTracking({
+        playerName,
+        gamesCount: games.length,
+        aliasesCount: aliases.length,
+        gameUrls: games.map(g => g.url),
+        isInCents: games.map(g => g.isInCents),
+        duration,
+        finalProfit,
+        hasErrors: trackingResults.has_errors
+      });
+    }
+    onStopTracking();
+  };
+
   const handleAddGame = () => {
     const trimmedUrl = gameUrl.trim();
 
@@ -223,14 +244,29 @@ export default function ResultsSection({
     }
 
     if (!games.some(game => game.url === trimmedUrl)) {
-      const newGames = [...games, { url: trimmedUrl, isInCents: false }];
+      const isInCents = false;
+      const newGames = [...games, { url: trimmedUrl, isInCents }];
       setGames(newGames);
       setGameUrl('');
       setError(null);
-      logDebug('Added new game:', trimmedUrl);
+      trackGameAdded(trimmedUrl, isInCents);
     } else {
       setError('This game URL is already in your list');
     }
+  };
+
+  const handleRemoveGame = (gameUrl: string) => {
+    const newGames = games.filter(game => game.url !== gameUrl);
+    setGames(newGames);
+    trackGameRemoved(gameUrl);
+  };
+
+  const handleToggleCents = (gameUrl: string, isInCents: boolean) => {
+    const newGames = games.map(game =>
+      game.url === gameUrl ? { ...game, isInCents } : game
+    );
+    setGames(newGames);
+    trackCentsToggled(gameUrl, isInCents);
   };
 
   const handleAddAlias = () => {
@@ -367,6 +403,8 @@ export default function ResultsSection({
               setGames={setGames}
               isResults={true}
               onUpdateGames={() => setError(null)}
+              onRemoveGame={handleRemoveGame}
+              onToggleCents={handleToggleCents}
             />
           </div>
 
@@ -382,7 +420,7 @@ export default function ResultsSection({
         </div>
 
         <div className="form-row" style={{ justifyContent: 'center', marginTop: '20px' }}>
-          <button className="stop" onClick={onStopTracking}>
+          <button className="stop" onClick={handleStopTracking}>
             Stop Tracking
           </button>
         </div>

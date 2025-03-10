@@ -37,8 +37,10 @@ export default [
       },
       globals: {
         ...globals.browser,
-        React: 'readonly',
-        JSX: 'readonly'
+        ...globals.es2021,
+        process: true,
+        React: true,
+        JSX: true
       }
     },
     settings: {

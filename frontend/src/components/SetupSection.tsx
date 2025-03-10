@@ -3,6 +3,7 @@ import { Game } from '../types';
 import GamesList from './GamesList';
 import AliasList from './AliasList';
 import * as api from '../services/api';
+import { trackStartTracking, trackError, trackGameAdded } from '../services/analytics';
 
 interface SetupSectionProps {
   games: Game[];
@@ -43,8 +44,10 @@ export default function SetupSection({
     }
 
     if (!games.some(game => game.url === trimmedUrl)) {
-      setGames([...games, { url: trimmedUrl, isInCents: false }]);
+      const isInCents = false;
+      setGames([...games, { url: trimmedUrl, isInCents }]);
       setGameUrl('');
+      trackGameAdded(trimmedUrl, isInCents);
     } else {
       setGameUrlError('This game URL is already in your list');
     }
@@ -77,12 +80,25 @@ export default function SetupSection({
       const data = await api.getResults(trimmedName, games, aliases);
       if (data.error) {
         setPlayerNameError(data.error);
+        trackError(data.error, { playerName: trimmedName, games, aliases });
         return;
       }
+
+      // Track the start tracking event
+      trackStartTracking({
+        playerName: trimmedName,
+        gamesCount: games.length,
+        aliasesCount: aliases.length,
+        gameUrls: games.map(g => g.url),
+        isInCents: games.map(g => g.isInCents)
+      });
+
       onStartTracking();
     } catch (error) {
       console.error('Error:', error);
-      setPlayerNameError('Error starting tracking: ' + (error as Error).message);
+      const errorMessage = 'Error starting tracking: ' + (error as Error).message;
+      setPlayerNameError(errorMessage);
+      trackError(errorMessage, { playerName: trimmedName, games, aliases });
     }
   };
 

@@ -15,6 +15,7 @@
     "@types/chart.js": "^2.9.41",
     "axios": "^1.8.2",
     "chart.js": "^4.4.8",
+    "posthog-js": "^1.229.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
