@@ -44,6 +44,7 @@ export default function ResultsSection({
   const [lastGameSettings, setLastGameSettings] = useState<Record<string, GameProfitInfo>>({});
   const [debugMode, setDebugMode] = useState(false);
   const [startTime] = useState<number>(Date.now());
+  const [isTabActive, setIsTabActive] = useState(true);
 
   const logDebug = useCallback((message: string, details?: unknown) => {
     if (debugMode) {
@@ -99,7 +100,29 @@ export default function ResultsSection({
     }, 0);
   }, [games, lastGameSettings, logDebug, validateAndConvertProfit]);
 
+  // Handle visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabActive(!document.hidden);
+      if (document.hidden) {
+        logDebug('Tab hidden, pausing polling');
+      } else {
+        logDebug('Tab visible, resuming polling');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   const pollResults = useCallback(async () => {
+    // Don't poll if tab is inactive
+    if (!isTabActive) {
+      return;
+    }
+
     const now = Date.now();
     if (now - lastPollTime < 4500) {
       return;
@@ -112,68 +135,74 @@ export default function ResultsSection({
 
     try {
       const data = await api.getResults(playerName, games, aliases);
-      setIsLoading(false);
+      // Only update state if the component is still mounted and tab is active
+      if (isTabActive) {
+        setIsLoading(false);
 
-      if (data.results) {
-        // Update tracking results
-        setTrackingResults(data.results);
+        if (data.results) {
+          // Update tracking results
+          setTrackingResults(data.results);
 
-        // Update last game settings for change detection
-        const newGameSettings: Record<string, GameProfitInfo> = {};
-        Object.entries(data.results.results).forEach(([gameUrl, profit]) => {
-          const game = games.find(g => g.url === gameUrl);
-          if (game && typeof profit === 'number') {
-            newGameSettings[gameUrl] = {
-              profit,
-              isInCents: game.isInCents,
-              lastUpdated: new Date().toISOString()
-            };
-          }
-        });
-        setLastGameSettings(newGameSettings);
-
-        // Update profit history
-        const currentTime = new Date().toISOString();
-        const currentProfit = calculateTotalProfit(data.results.results);
-
-        // If this is the first point, add a $0 starting point 5 minutes before
-        if (profitHistory.timestamps.length === 0) {
-          const startTime = new Date(new Date(currentTime).getTime() - 5 * 60000).toISOString();
-          setProfitHistory({
-            timestamps: [startTime, currentTime],
-            total_profits: [0, currentProfit]
+          // Update last game settings for change detection
+          const newGameSettings: Record<string, GameProfitInfo> = {};
+          Object.entries(data.results.results).forEach(([gameUrl, profit]) => {
+            const game = games.find(g => g.url === gameUrl);
+            if (game && typeof profit === 'number') {
+              newGameSettings[gameUrl] = {
+                profit,
+                isInCents: game.isInCents,
+                lastUpdated: new Date().toISOString()
+              };
+            }
           });
-          logDebug('Initialized profit history with $0 starting point:', { startTime, currentTime, profit: currentProfit });
-        } else {
-          const shouldAddPoint = 
-            profitHistory.total_profits[profitHistory.total_profits.length - 1] !== currentProfit ||
-            (new Date(currentTime).getTime() - new Date(profitHistory.timestamps[profitHistory.timestamps.length - 1]).getTime()) >= 60000;
+          setLastGameSettings(newGameSettings);
 
-          if (shouldAddPoint) {
-            setProfitHistory(prev => ({
-              timestamps: [...prev.timestamps, currentTime],
-              total_profits: [...prev.total_profits, currentProfit]
-            }));
-            logDebug('Added new profit history point:', { time: currentTime, profit: currentProfit });
+          // Update profit history
+          const currentTime = new Date().toISOString();
+          const currentProfit = calculateTotalProfit(data.results.results);
+
+          // If this is the first point, add a $0 starting point 5 minutes before
+          if (profitHistory.timestamps.length === 0) {
+            const startTime = new Date(new Date(currentTime).getTime() - 5 * 60000).toISOString();
+            setProfitHistory({
+              timestamps: [startTime, currentTime],
+              total_profits: [0, currentProfit]
+            });
+            logDebug('Initialized profit history with $0 starting point:', { startTime, currentTime, profit: currentProfit });
+          } else {
+            const shouldAddPoint = 
+              profitHistory.total_profits[profitHistory.total_profits.length - 1] !== currentProfit ||
+              (new Date(currentTime).getTime() - new Date(profitHistory.timestamps[profitHistory.timestamps.length - 1]).getTime()) >= 60000;
+
+            if (shouldAddPoint) {
+              setProfitHistory(prev => ({
+                timestamps: [...prev.timestamps, currentTime],
+                total_profits: [...prev.total_profits, currentProfit]
+              }));
+              logDebug('Added new profit history point:', { time: currentTime, profit: currentProfit });
+            }
           }
+
+          setError(null);
+        } else {
+          logDebug('No results received from API');
+          setError('No results received');
         }
 
-        setError(null);
-      } else {
-        logDebug('No results received from API');
-        setError('No results received');
-      }
-
-      if (data.error) {
-        logDebug('API returned error:', data.error);
-        setError(data.error);
+        if (data.error) {
+          logDebug('API returned error:', data.error);
+          setError(data.error);
+        }
       }
     } catch (error) {
-      console.error('Error polling results:', error);
-      setError('Error connecting to server: ' + (error as Error).message);
-      setIsLoading(false);
+      // Only update error state if the component is still mounted and tab is active
+      if (isTabActive) {
+        console.error('Error polling results:', error);
+        setError('Error connecting to server: ' + (error as Error).message);
+        setIsLoading(false);
+      }
     }
-  }, [lastPollTime, trackingResults, playerName, games, aliases, profitHistory, calculateTotalProfit, logDebug]);
+  }, [lastPollTime, trackingResults, playerName, games, aliases, profitHistory, calculateTotalProfit, logDebug, isTabActive]);
 
   // Effect to recalculate profit history when games' isInCents settings change
   useEffect(() => {
@@ -203,13 +232,16 @@ export default function ResultsSection({
   }, [games, trackingResults, calculateTotalProfit, lastGameSettings, logDebug]);
 
   useEffect(() => {
-    pollResults();
-    const pollInterval = setInterval(pollResults, 5000);
+    // Start polling only if tab is active
+    if (isTabActive) {
+      pollResults();
+      const pollInterval = setInterval(pollResults, 5000);
 
-    return () => {
-      clearInterval(pollInterval);
-    };
-  }, [pollResults]);
+      return () => {
+        clearInterval(pollInterval);
+      };
+    }
+  }, [pollResults, isTabActive]);
 
   const handleStopTracking = () => {
     if (trackingResults) {
